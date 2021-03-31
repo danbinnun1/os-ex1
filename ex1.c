@@ -54,7 +54,6 @@ StringsArray parseCommand(const char* command) {
                     length = 0;
                 } else if (*offset != ' ' && *offset != '\t') {
                     state = IN_WORD;
-                    argNum++;
                     length = 0;
                     args[argNum][length] = *offset;
                     length++;
@@ -69,6 +68,7 @@ StringsArray parseCommand(const char* command) {
                 } else {
                     args[argNum][length] = '\0';
                     state = IN_SPACE;
+                    argNum++;
                 }
                 break;
 
@@ -101,6 +101,7 @@ int main() {
         if (commandLength > 0 &&
             commands[command_index].str[commandLength - 1] == '\n')
             commands[command_index].str[commandLength - 1] = '\0';
+        commandLength--;
         // split by white character
         StringsArray args = parseCommand(commands[command_index].str);
         if (strcmp(args.data[0], "exit") == 0) {
@@ -141,7 +142,12 @@ int main() {
                     commands[command_index].pid = COMMAND_FINISHED;
 
                 } else {
-                    commands[command_index].str[commandLength] = '\0';
+                    uint8_t i = commandLength - 2;
+                    for (; commands[command_index].str[i] == ' ' ||
+                           commands[command_index].str[i] == '\t';
+                         --i)
+                        ;
+                    commands[command_index].str[i + 1] = '\0';
                     commands[command_index].pid = pid;
                 }
             }
