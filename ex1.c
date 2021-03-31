@@ -50,7 +50,6 @@ StringsArray parseCommand(const char* command) {
             case IN_SPACE:
                 if (*offset == '"') {
                     state = IN_QUOTATION;
-                    argNum++;
                     length = 0;
                 } else if (*offset != ' ' && *offset != '\t') {
                     state = IN_WORD;
@@ -130,7 +129,7 @@ int main() {
             char path[100];
             if (args.length == 1) {
                 chdir(getenv("HOME"));
-            } else {
+            } else if (args.length == 2) {
                 if (args.data[1][0] == '-') {
                     strcpy(path, lastDir);
                     if (strlen(args.data[1]) > 1) {
@@ -144,10 +143,13 @@ int main() {
                 } else {
                     strcpy(path, args.data[1]);
                 }
-            }
-            getcwd(lastDir, 100);
-            if (chdir(path) == -1) {
-                printf("chdir failed\n");
+
+                getcwd(lastDir, 100);
+                if (chdir(path) == -1) {
+                    printf("chdir failed\n");
+                }
+            } else {
+                printf("Too many arguments\n");
             }
         } else {
             pid_t pid = fork();
