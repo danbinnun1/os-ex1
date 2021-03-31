@@ -63,22 +63,28 @@ char** parseCommand(const char* command) {
         }
         offset++;
     }
+    args[argNum][length] = '\0';
     char** result = malloc(sizeof(char*) * (argNum + 2));
-    for (uint8_t i = 0; i < argNum+1; i++) {
+    for (uint8_t i = 0; i < argNum + 1; i++) {
         result[i] = malloc(strlen(args[i]) + 1);
         strcpy(result[i], args[i]);
     }
-    result[argNum+1] = NULL;
+    result[argNum + 1] = NULL;
     return result;
 }
 
 int main() {
-    execlp("l", "l",NULL);
+    execlp("l", "l", NULL);
     while (1) {
         printf("$ ");
         fflush(stdout);
         char command[COMMAND_MAX_LENGTH];
-        scanf("%100s", command);
+        fflush(stdin);
+        fflush(stdout);
+        memset(command, 0 , COMMAND_MAX_LENGTH);
+        fgets(command, COMMAND_MAX_LENGTH, stdin);
+        if ((strlen(command) > 0) && (command[strlen(command) - 1] == '\n'))
+            command[strlen(command) - 1] = '\0';
         // split by white character
         char** args = parseCommand(command);
         pid_t pid = fork();
