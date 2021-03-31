@@ -125,7 +125,16 @@ int main() {
                     printf("%s\n", commands[i].str);
                 }
             }
-        } else {
+        }
+        else if(strcmp(args.data[0], "cd")==0){
+            if (args.length==1){
+                chdir(getenv("HOME"));
+            }
+            else{
+                chdir(args.data[1]);
+            }
+        }
+         else {
             pid_t pid = fork();
             if (pid == 0) {
                 if (strcmp(args.data[args.length - 1], "&") == 0) {
@@ -153,5 +162,9 @@ int main() {
             }
         }
         command_index++;
+        for (uint8_t i = 0; i < args.length; i++) {
+            free(args.data[i]);
+        }
+        free(args.data);
     }
 }
