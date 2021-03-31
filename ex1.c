@@ -10,7 +10,12 @@
 #define IN_SPACE 1
 #define IN_WORD 2
 
-char** parseCommand(const char* command) {
+typedef struct {
+    char** data;
+    uint8_t length;
+} StringsArray;
+
+StringsArray parseCommand(const char* command) {
     char args[COMMAND_MAX_LENGTH][COMMAND_MAX_LENGTH];
     const char* offset = command;
     uint8_t length = 0;
@@ -70,7 +75,10 @@ char** parseCommand(const char* command) {
         strcpy(result[i], args[i]);
     }
     result[argNum + 1] = NULL;
-    return result;
+    StringsArray arr;
+    arr.data = result;
+    arr.length = argNum + 1;
+    return arr;
 }
 
 int main() {
@@ -79,22 +87,25 @@ int main() {
         printf("$ ");
         fflush(stdout);
         char command[COMMAND_MAX_LENGTH];
-        fflush(stdin);
-        fflush(stdout);
-        memset(command, 0 , COMMAND_MAX_LENGTH);
         fgets(command, COMMAND_MAX_LENGTH, stdin);
         if ((strlen(command) > 0) && (command[strlen(command) - 1] == '\n'))
             command[strlen(command) - 1] = '\0';
         // split by white character
-        char** args = parseCommand(command);
+        StringsArray args = parseCommand(command);
         pid_t pid = fork();
         if (pid == 0) {
-            if (execvp(args[0], args) == -1) {
+            if (strcmp(args.data[args.length - 1], "&") == 0) {
+                free(args.data[args.length - 1]);
+                args.data[args.length - 1] = NULL;
+            }
+            if (execvp(args.data[0], args.data) == -1) {
                 printf("exec failed\n");
                 exit(0);
             }
         } else {
-            waitpid(pid, NULL, 0);
+            if (strcmp(args.data[args.length - 1], "&") != 0) {
+                waitpid(pid, NULL, 0);
+            }
         }
     }
 }
