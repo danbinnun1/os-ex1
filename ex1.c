@@ -92,6 +92,7 @@ StringsArray parseCommand(const char* command) {
 
 int main() {
     command commands[MAX_COMMANDS];
+    char lastDir[100];
     uint8_t command_index = 0;
     while (1) {
         printf("$ ");
@@ -125,18 +126,34 @@ int main() {
                     printf("%s\n", commands[i].str);
                 }
             }
-        }
-        else if(strcmp(args.data[0], "cd")==0){
-            if (args.length==1){
+        } else if (strcmp(args.data[0], "cd") == 0) {
+            char path[100];
+            if (args.length == 1) {
                 chdir(getenv("HOME"));
+            } else {
+                if (args.data[1][0] == '-') {
+                    strcpy(path, lastDir);
+                    if (strlen(args.data[1]) > 1) {
+                        strcat(path, args.data[1] + 1);
+                    }
+                } else if (args.data[1][0] == '~') {
+                    strcpy(path, getenv("HOME"));
+                    if (strlen(args.data[1]) > 1) {
+                        strcat(path, args.data[1] + 1);
+                    }
+                } else {
+                    strcpy(path, args.data[1]);
+                }
             }
-            else{
-                chdir(args.data[1]);
+            getcwd(lastDir, 100);
+            if (chdir(path) == -1) {
+                printf("chdir failed\n");
             }
-        }
-         else {
+        } else {
             pid_t pid = fork();
-            if (pid == 0) {
+            if (pid == -1) {
+                printf("fork failed\n");
+            } else if (pid == 0) {
                 if (strcmp(args.data[args.length - 1], "&") == 0) {
                     free(args.data[args.length - 1]);
                     args.data[args.length - 1] = NULL;
