@@ -6,14 +6,23 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #define COMMAND_MAX_LENGTH 100
+#define MAX_COMMANDS 100
 #define IN_QUOTATION 0
 #define IN_SPACE 1
 #define IN_WORD 2
+#define DONE "DONE"
+#define RUNNING "RUNNING"
+#define COMMAND_FINISHED 0
 
 typedef struct {
     char** data;
     uint8_t length;
 } StringsArray;
+
+typedef struct {
+    char str[COMMAND_MAX_LENGTH];
+    pid_t pid;
+} command;
 
 StringsArray parseCommand(const char* command) {
     char args[COMMAND_MAX_LENGTH][COMMAND_MAX_LENGTH];
@@ -82,30 +91,61 @@ StringsArray parseCommand(const char* command) {
 }
 
 int main() {
-    execlp("l", "l", NULL);
+    command commands[MAX_COMMANDS];
+    uint8_t command_index = 0;
     while (1) {
         printf("$ ");
         fflush(stdout);
-        char command[COMMAND_MAX_LENGTH];
-        fgets(command, COMMAND_MAX_LENGTH, stdin);
-        if ((strlen(command) > 0) && (command[strlen(command) - 1] == '\n'))
-            command[strlen(command) - 1] = '\0';
+        fgets(commands[command_index].str, COMMAND_MAX_LENGTH, stdin);
+        uint8_t commandLength = strlen(commands[command_index].str);
+        if (commandLength > 0 &&
+            commands[command_index].str[commandLength - 1] == '\n')
+            commands[command_index].str[commandLength - 1] = '\0';
         // split by white character
-        StringsArray args = parseCommand(command);
-        pid_t pid = fork();
-        if (pid == 0) {
-            if (strcmp(args.data[args.length - 1], "&") == 0) {
-                free(args.data[args.length - 1]);
-                args.data[args.length - 1] = NULL;
+        StringsArray args = parseCommand(commands[command_index].str);
+        if (strcmp(args.data[0], "exit") == 0) {
+            exit(0);
+        } else if (strcmp(args.data[0], "history") == 0) {
+            for (uint8_t i = 0; i < command_index; i++) {
+                printf("%s ", commands[i].str);
+                if (commands[i].pid == COMMAND_FINISHED) {
+                    printf("%s\n", DONE);
+                } else if (waitpid(commands[i].pid, NULL, WNOHANG) == 0) {
+                    printf("%s\n", RUNNING);
+                } else {
+                    printf("%s\n", DONE);
+                }
             }
-            if (execvp(args.data[0], args.data) == -1) {
-                printf("exec failed\n");
-                exit(0);
+            printf("%s\n", "history RUNNING");
+        } else if (strcmp(args.data[0], "jobs") == 0) {
+            for (uint8_t i = 0; i < command_index; i++) {
+                if (commands[i].pid != COMMAND_FINISHED &&
+                    waitpid(commands[i].pid, NULL, WNOHANG) == 0) {
+                    printf("%s\n", commands[i].str);
+                }
             }
         } else {
-            if (strcmp(args.data[args.length - 1], "&") != 0) {
-                waitpid(pid, NULL, 0);
+            pid_t pid = fork();
+            if (pid == 0) {
+                if (strcmp(args.data[args.length - 1], "&") == 0) {
+                    free(args.data[args.length - 1]);
+                    args.data[args.length - 1] = NULL;
+                }
+                if (execvp(args.data[0], args.data) == -1) {
+                    printf("exec failed\n");
+                    exit(0);
+                }
+            } else {
+                if (strcmp(args.data[args.length - 1], "&") != 0) {
+                    waitpid(pid, NULL, 0);
+                    commands[command_index].pid = COMMAND_FINISHED;
+
+                } else {
+                    commands[command_index].str[commandLength] = '\0';
+                    commands[command_index].pid = pid;
+                }
             }
         }
+        command_index++;
     }
 }
