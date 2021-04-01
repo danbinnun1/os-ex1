@@ -77,8 +77,9 @@ StringsArray parseCommand(const char* command) {
         offset++;
     }
     args[argNum][length] = '\0';
+    uint8_t i;
     char** result = malloc(sizeof(char*) * (argNum + 2));
-    for (uint8_t i = 0; i < argNum + 1; i++) {
+    for (i = 0; i < argNum + 1; i++) {
         result[i] = malloc(strlen(args[i]) + 1);
         strcpy(result[i], args[i]);
     }
@@ -93,6 +94,7 @@ int main() {
     command commands[MAX_COMMANDS];
     char lastDir[100];
     uint8_t command_index = 0;
+    uint8_t i;
     while (1) {
         printf("$ ");
         fflush(stdout);
@@ -107,7 +109,7 @@ int main() {
         if (strcmp(args.data[0], "exit") == 0) {
             exit(0);
         } else if (strcmp(args.data[0], "history") == 0) {
-            for (uint8_t i = 0; i < command_index; i++) {
+            for (i = 0; i < command_index; i++) {
                 printf("%s ", commands[i].str);
                 if (commands[i].pid == COMMAND_FINISHED) {
                     printf("%s\n", DONE);
@@ -119,7 +121,7 @@ int main() {
             }
             printf("%s\n", "history RUNNING");
         } else if (strcmp(args.data[0], "jobs") == 0) {
-            for (uint8_t i = 0; i < command_index; i++) {
+            for (i = 0; i < command_index; i++) {
                 if (commands[i].pid != COMMAND_FINISHED &&
                     waitpid(commands[i].pid, NULL, WNOHANG) == 0) {
                     printf("%s\n", commands[i].str);
@@ -128,7 +130,10 @@ int main() {
         } else if (strcmp(args.data[0], "cd") == 0) {
             char path[100];
             if (args.length == 1) {
-                chdir(getenv("HOME"));
+                getcwd(lastDir, 100);
+                if (chdir(getenv("HOME")) == -1) {
+                    printf("chdir failed\n");
+                }
             } else if (args.length == 2) {
                 if (args.data[1][0] == '-') {
                     strcpy(path, lastDir);
@@ -181,7 +186,7 @@ int main() {
             }
         }
         command_index++;
-        for (uint8_t i = 0; i < args.length; i++) {
+        for (i = 0; i < args.length; i++) {
             free(args.data[i]);
         }
         free(args.data);
